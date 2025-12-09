@@ -6,9 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Vercel envia req.body como string em funções .js
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-
     const email = body?.email;
 
     if (!email) {
@@ -17,6 +15,7 @@ export default async function handler(req, res) {
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // Somente enviar email — sem contatos!
     await resend.emails.send({
       from: "Bolão da Copa <onboarding@resend.dev>",
       to: email,
