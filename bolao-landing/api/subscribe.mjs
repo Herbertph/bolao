@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     console.log(">>> SENDING EMAIL...");
 
     const result = await resend.emails.send({
-      from: "Bolão <onboarding@resend.dev>",
+      from: "Bolao <onboarding@resend.dev>",
       to: email,
       subject: "Bem-vindo!",
       html: "<p>Obrigado por se inscrever!</p>",
