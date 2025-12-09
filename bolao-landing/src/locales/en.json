@@ -3,6 +3,7 @@
   "subtitle": "Type your e-mail to be notified when we launch.",
   "button": "Notify me",
   "placeholder": "Type your e-mail",
+  "loading": "Sending...",
   "success": "Thank you! You'll be notified.",
   "error": "Please enter a valid e-mail."
 }
