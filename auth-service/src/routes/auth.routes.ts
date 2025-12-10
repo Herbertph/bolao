@@ -11,5 +11,7 @@ const controller = new AuthController();
 router.post("/register", validate(registerSchema), controller.register);
 router.post("/login", validate(loginSchema), controller.login);
 router.get("/me", authMiddleware, controller.me);
+router.post("/refresh", controller.refresh);
+router.post("/logout", authMiddleware, controller.logout);
 
 export default router;

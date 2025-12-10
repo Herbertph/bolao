@@ -13,7 +13,8 @@ const UserSchema = new mongoose.Schema(
     status: { type: String, default: "active" },
 
     isEmailVerified: { type: Boolean, default: false },
-    lastLogin: Date
+    lastLogin: Date,
+    refreshTokenHash: { type: String, default: null, required: false }
   },
   { timestamps: true }
 );

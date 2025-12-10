@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AuthService } from "../services/auth.services.js";
-import { User } from "../models/User.js";
+
 const service = new AuthService();
 
 export class AuthController {
@@ -25,15 +25,33 @@ export class AuthController {
     }
   }
 
-  async me(req: any, res: any) {
+  async me(req: any, res: Response) {
     try {
-      const user = await User.findById(req.user.id).select("-passwordHash");
-  
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-  
+      const user = await service.me(req.user.id);
       return res.json({ user });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  }
+
+  async refresh(req: Request, res: Response) {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return res.status(400).json({ error: "Missing refresh token" });
+      }
+
+      const tokens = await service.refresh(refreshToken);
+      return res.json(tokens);
+    } catch (err: any) {
+      return res.status(401).json({ error: err.message });
+    }
+  }
+
+  async logout(req: any, res: Response) {
+    try {
+      await service.logout(req.user.id);
+      return res.json({ message: "Logged out" });
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }
