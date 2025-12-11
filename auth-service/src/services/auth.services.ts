@@ -1,8 +1,9 @@
-import { User } from "../models/User.js";
-import { hashPassword, comparePassword } from "../utils/password.js";
-import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
+import { User } from "../models/User";
+import { hashPassword, comparePassword } from "../utils/password";
+import { generateAccessToken, generateRefreshToken } from "../utils/token";
 import jwt from "jsonwebtoken";
-import { generateResetPasswordToken, verifyResetPasswordToken } from "../utils/resetToken.js";
+import { generateResetPasswordToken, verifyResetPasswordToken } from "../utils/resetToken";
+import { redis } from "../config/redis";
 
 export class AuthService {
 
@@ -87,18 +88,24 @@ export class AuthService {
     const newRefreshToken = await this.issueRefreshToken(user);
     const newAccessToken = generateAccessToken(user.id);
 
+    const blacklisted = await redis.get(`blacklist:${oldRefreshToken}`);
+if (blacklisted) throw new Error("Refresh token invalidated");
+
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 
   // -----------------------------------------
   // LOGOUT
   // -----------------------------------------
-  async logout(userId: string) {
-    const user = await User.findById(userId);
-    if (!user) return;
-
-    user.refreshTokenHash = null;
-    await user.save();
+  async logout(userId: string, refreshToken: string) {
+    await redis.set(
+      `blacklist:${refreshToken}`,
+      "1",
+      "EX",
+      60 * 60 * 24 * 7 // 7 dias
+    );
+  
+    return { message: "User logged out" };
   }
 
   // -----------------------------------------

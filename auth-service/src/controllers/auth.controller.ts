@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AuthService } from "../services/auth.services.js";
+import { AuthService } from "../services/auth.services";
 
 const service = new AuthService();
 
@@ -48,9 +48,19 @@ export class AuthController {
     }
   }
 
-  async logout(req: any, res: Response) {
+  async logout(req: Request, res: Response) {
     try {
-      await service.logout(req.user.id);
+      const refreshToken = req.body.refreshToken;
+      if (!refreshToken) {
+        return res.status(400).json({ error: "Refresh token is required" });
+      }
+  
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      await service.logout(req.user.id, refreshToken);
+  
       return res.json({ message: "Logged out" });
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
