@@ -9,8 +9,10 @@ export class AuthController {
       const result = await service.register(req.body);
       return res.status(201).json(result);
     } catch (err: any) {
-      return res.status(400).json({ error: err.message });
+      console.error("REGISTER ERROR FULL:", JSON.stringify(err, null, 2));
+      return res.status(400).json({ error: err?.message || String(err) });
     }
+    
   }
 
   async login(req: Request, res: Response) {
