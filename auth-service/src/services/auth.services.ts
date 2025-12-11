@@ -2,6 +2,7 @@ import { User } from "../models/User.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
 import jwt from "jsonwebtoken";
+import { generateResetPasswordToken, verifyResetPasswordToken } from "../utils/resetToken.js";
 
 export class AuthService {
 
@@ -100,9 +101,59 @@ export class AuthService {
     await user.save();
   }
 
+  // -----------------------------------------
+  // ME
+  // -----------------------------------------s
   async me(userId: string) {
     const user = await User.findById(userId).select("-passwordHash -refreshTokenHash");
     if (!user) throw new Error("User not found");
     return user;
   }
+
+  // -----------------------------------------
+  // SEND RESET PASSWORD EMAIL
+  // -----------------------------------------
+  async sendResetPasswordEmail(email: string, token: string) {
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    console.log("Send email to:", email);
+    console.log("Link:", resetLink);
+  
+    // Aqui futuramente usamos Resend:
+    // await resend.emails.send({ ... })
+  }
+
+  async forgotPassword(email: string) {
+    const user = await User.findOne({ email });
+    if (!user) throw new Error("Email not found");
+  
+    const token = generateResetPasswordToken(user.id);
+  
+    await this.sendResetPasswordEmail(email, token);
+  
+    return { message: "Reset link sent" };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    let decoded: any;
+    try {
+      decoded = verifyResetPasswordToken(token);
+    } catch (err) {
+      throw new Error("Invalid or expired reset token");
+    }
+  
+    const user = await User.findById(decoded.sub);
+    if (!user) throw new Error("User not found");
+  
+    // atualizar a senha
+    user.passwordHash = await hashPassword(newPassword);
+  
+    // remover refresh token do usuário
+    user.refreshTokenHash = null;
+  
+    await user.save();
+  
+    return { message: "Password reset successfully" };
+  }
+  
+  
 }

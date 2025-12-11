@@ -13,5 +13,7 @@ router.post("/login", validate(loginSchema), controller.login);
 router.get("/me", authMiddleware, controller.me);
 router.post("/refresh", controller.refresh);
 router.post("/logout", authMiddleware, controller.logout);
+router.post("/forgot-password", controller.forgotPassword);
+router.post("/reset-password/:token", controller.resetPassword);
 
 export default router;

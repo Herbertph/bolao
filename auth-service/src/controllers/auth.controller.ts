@@ -56,4 +56,35 @@ export class AuthController {
       return res.status(400).json({ error: err.message });
     }
   }
+
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const result = await service.forgotPassword(req.body.email);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  }
+  
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const token = req.params.token;
+      const password = req.body.password;
+  
+      if (!token) {
+        return res.status(400).json({ error: "Missing reset token" });
+      }
+  
+      if (!password) {
+        return res.status(400).json({ error: "Missing new password" });
+      }
+  
+      const result = await service.resetPassword(token, password);
+      return res.json(result);
+  
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  }
+  
 }
