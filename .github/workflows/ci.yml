@@ -1,0 +1,79 @@
+name: Monorepo Smart CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  detect_changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      auth_changed: ${{ steps.filter.outputs.auth }}
+      landing_changed: ${{ steps.filter.outputs.landing }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect which folders changed
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            auth:
+              - 'auth-service/**'
+            landing:
+              - 'bolao-landing/**'
+
+  # -----------------------------
+  # AUTH-SERVICE CI PIPELINE
+  # -----------------------------
+  auth_service_tests:
+    name: Auth Service Tests
+    needs: detect_changes
+    if: needs.detect_changes.outputs.auth_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          check-latest: true
+
+      - name: Install dependencies
+        working-directory: auth-service
+        run: npm install
+
+      - name: Run tests
+        working-directory: auth-service
+        run: npm test -- --runInBand
+
+  # -----------------------------
+  # FRONTEND LANDING PAGE CI
+  # -----------------------------
+  landing_ci:
+    name: Landing Page Lint & Build
+    needs: detect_changes
+    if: needs.detect_changes.outputs.landing_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install deps
+        working-directory: bolao-landing
+        run: npm install
+
+      - name: Build landing page
+        working-directory: bolao-landing
+        run: npm run build
