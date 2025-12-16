@@ -4,12 +4,13 @@ import { generateAccessToken, generateRefreshToken } from "../utils/token";
 import jwt from "jsonwebtoken";
 import { generateResetPasswordToken, verifyResetPasswordToken } from "../utils/resetToken";
 import { redis } from "../config/redis";
+import { audit } from "../utils/audit";
 
 export class AuthService {
 
-  // -----------------------------------------
+  // ==========================================
   // REGISTER
-  // -----------------------------------------
+  // ==========================================
   async register(data: any) {
     const emailExists = await User.findOne({ email: data.email });
     if (emailExists) throw new Error("Email already in use");
@@ -27,17 +28,27 @@ export class AuthService {
       passwordHash
     });
 
-    // ROTATE REFRESH TOKEN
-    const refreshToken = await this.issueRefreshToken(user);
+    // AUDIT (não pode quebrar o fluxo)
+    try {
+      await audit({
+        service: "auth-service",
+        action: "USER_REGISTER",
+        userId: user.id,
+        metadata: { email: user.email }
+      });
+    } catch (err) {
+      console.error("Audit error (register):", (err as any).message);
+    }
 
+    const refreshToken = await this.issueRefreshToken(user);
     const accessToken = generateAccessToken(user.id);
 
     return { user, accessToken, refreshToken };
   }
 
-  // -----------------------------------------
+  // ==========================================
   // LOGIN
-  // -----------------------------------------
+  // ==========================================
   async login(emailOrUsername: string, password: string) {
     const user = await User.findOne({
       $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
@@ -51,17 +62,25 @@ export class AuthService {
     user.lastLogin = new Date();
     await user.save();
 
-    // ROTATE REFRESH TOKEN
-    const refreshToken = await this.issueRefreshToken(user);
+    // AUDIT
+    try {
+      await audit({
+        service: "auth-service",
+        action: "USER_LOGIN",
+        userId: user.id,
+        metadata: { username: user.username }
+      });
+    } catch {}
 
+    const refreshToken = await this.issueRefreshToken(user);
     const accessToken = generateAccessToken(user.id);
 
     return { user, accessToken, refreshToken };
   }
 
-  // -----------------------------------------
-  // ISSUE REFRESH TOKEN (rotating)
-  // -----------------------------------------
+  // ==========================================
+  // ISSUE REFRESH TOKEN
+  // ==========================================
   private async issueRefreshToken(user: any) {
     const refreshToken = generateRefreshToken(user.id);
     const refreshTokenHash = await hashPassword(refreshToken);
@@ -72,9 +91,9 @@ export class AuthService {
     return refreshToken;
   }
 
-  // -----------------------------------------
-  // REFRESH TOKEN ENDPOINT LOGIC
-  // -----------------------------------------
+  // ==========================================
+  // REFRESH TOKEN
+  // ==========================================
   async refresh(oldRefreshToken: string) {
     const decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET!);
 
@@ -84,83 +103,100 @@ export class AuthService {
     const isValid = await comparePassword(oldRefreshToken, user.refreshTokenHash);
     if (!isValid) throw new Error("Invalid refresh token");
 
-    // ROTATE TOKEN
+    const isBlacklisted = await redis.get(`blacklist:${oldRefreshToken}`);
+    if (isBlacklisted) throw new Error("Refresh token invalidated");
+
     const newRefreshToken = await this.issueRefreshToken(user);
     const newAccessToken = generateAccessToken(user.id);
-
-    const blacklisted = await redis.get(`blacklist:${oldRefreshToken}`);
-if (blacklisted) throw new Error("Refresh token invalidated");
 
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 
-  // -----------------------------------------
+  // ==========================================
   // LOGOUT
-  // -----------------------------------------
+  // ==========================================
   async logout(userId: string, refreshToken: string) {
     await redis.set(
       `blacklist:${refreshToken}`,
       "1",
       "EX",
-      60 * 60 * 24 * 7 // 7 dias
+      60 * 60 * 24 * 7
     );
-  
+
     return { message: "User logged out" };
   }
 
-  // -----------------------------------------
+  // ==========================================
   // ME
-  // -----------------------------------------s
+  // ==========================================
   async me(userId: string) {
-    const user = await User.findById(userId).select("-passwordHash -refreshTokenHash");
+    const user = await User.findById(userId)
+      .select("-passwordHash -refreshTokenHash");
+
     if (!user) throw new Error("User not found");
+
     return user;
   }
 
-  // -----------------------------------------
+  // ==========================================
   // SEND RESET PASSWORD EMAIL
-  // -----------------------------------------
+  // ==========================================
   async sendResetPasswordEmail(email: string, token: string) {
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
     console.log("Send email to:", email);
     console.log("Link:", resetLink);
-  
-    // Aqui futuramente usamos Resend:
-    // await resend.emails.send({ ... })
   }
 
+  // ==========================================
+  // FORGOT PASSWORD
+  // ==========================================
   async forgotPassword(email: string) {
     const user = await User.findOne({ email });
     if (!user) throw new Error("Email not found");
-  
+
     const token = generateResetPasswordToken(user.id);
-  
+
+    try {
+      await audit({
+        service: "auth-service",
+        action: "FORGOT_PASSWORD",
+        userId: user.id,
+        metadata: {}
+      });
+    } catch {}
+
     await this.sendResetPasswordEmail(email, token);
-  
+
     return { message: "Reset link sent" };
   }
 
+  // ==========================================
+  // RESET PASSWORD
+  // ==========================================
   async resetPassword(token: string, newPassword: string) {
     let decoded: any;
     try {
       decoded = verifyResetPasswordToken(token);
-    } catch (err) {
+    } catch {
       throw new Error("Invalid or expired reset token");
     }
-  
+
     const user = await User.findById(decoded.sub);
     if (!user) throw new Error("User not found");
-  
-    // atualizar a senha
+
     user.passwordHash = await hashPassword(newPassword);
-  
-    // remover refresh token do usuário
     user.refreshTokenHash = null;
-  
     await user.save();
-  
+
+    try {
+      await audit({
+        service: "auth-service",
+        action: "PASSWORD_RESET",
+        userId: user.id,
+        metadata: {}
+      });
+    } catch {}
+
     return { message: "Password reset successfully" };
   }
-  
-  
 }

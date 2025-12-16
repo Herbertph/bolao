@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  # ----------------------------
+  # AUTH SERVICE
+  # ----------------------------
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: 5001
+      MONGO_URI: "mongodb://auth-mongo:27017/bolao-auth"
+      JWT_ACCESS_SECRET: supersecretaccess
+      JWT_REFRESH_SECRET: supersecretrefresh
+      JWT_RESET_PASSWORD_SECRET: algum_secret_bem_forte_aqui
+      JWT_RESET_PASSWORD_EXPIRES: 15m
+      FRONTEND_URL: http://localhost:5173
+      REDIS_URL: "redis://auth-redis:6379"
+    depends_on:
+      - auth-mongo
+      - auth-redis
+
+  # ----------------------------
+  # AUTH DATABASE (MongoDB)
+  # ----------------------------
+  auth-mongo:
+    image: mongo:7
+    container_name: auth-mongo
+    ports:
+      - "27018:27017"
+    volumes:
+      - auth-mongo-data:/data/db
+
+  # ----------------------------
+  # AUTH REDIS
+  # ----------------------------
+  auth-redis:
+    image: redis:alpine
+    container_name: auth-redis
+    ports:
+      - "6380:6379"
+
+  # ----------------------------
+  # AUDIT SERVICE
+  # ----------------------------
+  audit-service:
+    build: ./audit-service
+    container_name: audit-service
+    ports:
+      - "5005:5005"
+    environment:
+      PORT: 5005
+      MONGO_URL: "mongodb://audit-mongo:27017/auditdb"
+    depends_on:
+      - audit-mongo
+
+  # ----------------------------
+  # AUDIT DATABASE
+  # ----------------------------
+  audit-mongo:
+    image: mongo:7
+    container_name: audit-mongo
+    ports:
+      - "27020:27017"
+    volumes:
+      - audit-mongo-data:/data/db
+
+# -------------------------------
+# VOLUMES
+# -------------------------------
+volumes:
+  auth-mongo-data:
+  audit-mongo-data:
