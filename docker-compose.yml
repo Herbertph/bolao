@@ -67,9 +67,26 @@ services:
     volumes:
       - audit-mongo-data:/data/db
 
+  # ----------------------------
+  # COMPETITION POSTGRES (NOVO)
+  # ----------------------------
+  competition-postgres:
+    image: postgres:15
+    container_name: competition-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: competitiondb
+    ports:
+      - "5432:5432"
+    volumes:
+      - competition-postgres-data:/var/lib/postgresql/data
+
 # -------------------------------
 # VOLUMES
 # -------------------------------
 volumes:
   auth-mongo-data:
   audit-mongo-data:
+  competition-postgres-data:
