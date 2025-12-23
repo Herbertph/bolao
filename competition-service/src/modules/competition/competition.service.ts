@@ -11,21 +11,12 @@ export class CompetitionService {
   }
 
   async list() {
-    return prisma.competition.findMany({
-      include: {
-        groups: true,
-        matches: true,
-      },
-    });
+    return prisma.competition.findMany();
   }
 
   async findById(id: string) {
     return prisma.competition.findUnique({
       where: { id },
-      include: {
-        groups: true,
-        matches: true,
-      },
     });
   }
 }
