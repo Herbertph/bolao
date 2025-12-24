@@ -61,15 +61,15 @@ export class MatchesController {
     try {
       const { competitionId, groupId, roundId } = req.query;
   
-      if (!competitionId || typeof competitionId !== "string") {
-        return res.status(400).json({
-          message: "competitionId is required",
-        });
-      }
+      const filters: {
+        competitionId?: string;
+        groupId?: string;
+        roundId?: string;
+      } = {};
   
-      // 👇 CONSTRUÇÃO SEGURA (SEM undefined)
-      const filters: { competitionId: string; groupId?: string; roundId?: string } =
-        { competitionId };
+      if (typeof competitionId === "string") {
+        filters.competitionId = competitionId;
+      }
   
       if (typeof groupId === "string") {
         filters.groupId = groupId;

@@ -1,4 +1,3 @@
-// src/modules/matches/matches.service.ts
 import { prisma } from "../../lib/prisma.js";
 import { MatchStatus, Phase } from "@prisma/client";
 
@@ -8,6 +7,12 @@ interface CreateMatchInput {
   startTime: Date;
   homeTeamId: string;
   awayTeamId: string;
+  groupId?: string;
+  roundId?: string;
+}
+
+interface ListMatchesFilters {
+  competitionId?: string;
   groupId?: string;
   roundId?: string;
 }
@@ -23,21 +28,16 @@ export class MatchesService {
         homeTeamId: data.homeTeamId,
         awayTeamId: data.awayTeamId,
 
-        // Só adiciona se existir (NUNCA undefined explícito)
         ...(data.groupId && { groupId: data.groupId }),
         ...(data.roundId && { roundId: data.roundId }),
       },
     });
   }
 
-  async list(filters: {
-    competitionId: string;
-    groupId?: string;
-    roundId?: string;
-  }) {
+  async list(filters: ListMatchesFilters = {}) {
     return prisma.match.findMany({
       where: {
-        competitionId: filters.competitionId,
+        ...(filters.competitionId && { competitionId: filters.competitionId }),
         ...(filters.groupId && { groupId: filters.groupId }),
         ...(filters.roundId && { roundId: filters.roundId }),
       },
