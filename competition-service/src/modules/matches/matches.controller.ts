@@ -61,6 +61,13 @@ export class MatchesController {
     try {
       const { competitionId, groupId, roundId } = req.query;
   
+      // Nenhum filtro → erro explícito
+      if (!competitionId && !groupId && !roundId) {
+        return res.status(400).json({
+          message: "At least one filter is required: competitionId, groupId or roundId",
+        });
+      }
+  
       const filters: {
         competitionId?: string;
         groupId?: string;
@@ -80,7 +87,6 @@ export class MatchesController {
       }
   
       const matches = await service.list(filters);
-  
       return res.json(matches);
     } catch (error) {
       console.error("MatchesController.list error:", error);
