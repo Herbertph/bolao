@@ -2,10 +2,13 @@ name: Monorepo Smart CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
+# --------------------------------------------------
+# 1. DETECT CHANGES (SMART MONOREPO)
+# --------------------------------------------------
 jobs:
   detect_changes:
     name: Detect changed services
@@ -13,6 +16,8 @@ jobs:
     outputs:
       auth_changed: ${{ steps.filter.outputs.auth }}
       landing_changed: ${{ steps.filter.outputs.landing }}
+      competition_changed: ${{ steps.filter.outputs.competition }}
+      infra_changed: ${{ steps.filter.outputs.infra }}
 
     steps:
       - uses: actions/checkout@v4
@@ -26,10 +31,15 @@ jobs:
               - 'auth-service/**'
             landing:
               - 'bolao-landing/**'
+            competition:
+              - 'competition-service/**'
+            infra:
+              - 'docker-compose.yml'
+              - '**/Dockerfile'
 
-  # -----------------------------
-  # AUTH-SERVICE CI PIPELINE
-  # -----------------------------
+  # --------------------------------------------------
+  # 2. AUTH SERVICE — FAST UNIT TESTS (NO DOCKER)
+  # --------------------------------------------------
   auth_service_tests:
     name: Auth Service Tests
     needs: detect_changes
@@ -53,9 +63,39 @@ jobs:
         working-directory: auth-service
         run: npm test -- --runInBand
 
-  # -----------------------------
-  # FRONTEND LANDING PAGE CI
-  # -----------------------------
+  # --------------------------------------------------
+  # 3. COMPETITION SERVICE — DOCKER + POSTGRES + PRISMA
+  # --------------------------------------------------
+  competition_service_ci:
+    name: Competition Service (Docker)
+    needs: detect_changes
+    if: |
+      needs.detect_changes.outputs.competition_changed == 'true' ||
+      needs.detect_changes.outputs.infra_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start services
+        run: docker compose up --build -d
+
+      - name: Wait for services to be ready
+        run: sleep 20
+
+      - name: Run Competition Service tests
+        run: docker exec competition-service npm test -- --runInBand
+
+      - name: Shutdown containers
+        if: always()
+        run: docker compose down -v
+
+  # --------------------------------------------------
+  # 4. LANDING PAGE — BUILD CHECK
+  # --------------------------------------------------
   landing_ci:
     name: Landing Page Lint & Build
     needs: detect_changes
@@ -70,7 +110,7 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install deps
+      - name: Install dependencies
         working-directory: bolao-landing
         run: npm install
 

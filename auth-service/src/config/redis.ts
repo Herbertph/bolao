@@ -2,8 +2,8 @@ import Redis from "ioredis";
 
 let redis: any;
 
-// Durante testes, usamos mock para evitar conexão real
 if (process.env.NODE_ENV === "test") {
+  // Mock para testes
   redis = {
     on: () => {},
     get: async () => null,
@@ -12,7 +12,13 @@ if (process.env.NODE_ENV === "test") {
   } as any;
 
 } else {
-  redis = new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379");
+  const redisUrl = process.env.REDIS_URL;
+
+  if (!redisUrl) {
+    throw new Error("REDIS_URL is not defined");
+  }
+
+  redis = new Redis(redisUrl);
 
   redis.on("connect", () => {
     console.log("Redis connected");

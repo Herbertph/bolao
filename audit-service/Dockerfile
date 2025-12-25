@@ -1,12 +1,33 @@
-FROM node:20
+# ============================
+# BUILD STAGE
+# ============================
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Instala todas as dependências (inclui dev)
+COPY package*.json ./
+RUN npm install
+
+# Copia o código e compila
+COPY . .
+RUN npm run build
+
+
+# ============================
+# RUNTIME STAGE
+# ============================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instala apenas dependências de produção
 COPY package*.json ./
 RUN npm install --production
 
-COPY . .
+# Copia apenas o build final
+COPY --from=build /app/dist ./dist
 
-RUN npm run build
+ENV NODE_ENV=production
 
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ----------------------------
   # AUTH SERVICE
@@ -9,22 +7,12 @@ services:
     container_name: auth-service
     ports:
       - "5001:5001"
-    environment:
-      PORT: 5001
-      MONGO_URI: "mongodb://auth-mongo:27017/bolao-auth"
-      JWT_ACCESS_SECRET: supersecretaccess
-      JWT_REFRESH_SECRET: supersecretrefresh
-      JWT_RESET_PASSWORD_SECRET: algum_secret_bem_forte_aqui
-      JWT_RESET_PASSWORD_EXPIRES: 15m
-      FRONTEND_URL: http://localhost:5173
-      REDIS_URL: "redis://auth-redis:6379"
+    env_file:
+      - ./auth-service/.env.docker
     depends_on:
       - auth-mongo
       - auth-redis
 
-  # ----------------------------
-  # AUTH DATABASE (MongoDB)
-  # ----------------------------
   auth-mongo:
     image: mongo:7
     container_name: auth-mongo
@@ -33,9 +21,6 @@ services:
     volumes:
       - auth-mongo-data:/data/db
 
-  # ----------------------------
-  # AUTH REDIS
-  # ----------------------------
   auth-redis:
     image: redis:alpine
     container_name: auth-redis
@@ -52,13 +37,10 @@ services:
       - "5005:5005"
     environment:
       PORT: 5005
-      MONGO_URL: "mongodb://audit-mongo:27017/auditdb"
+      MONGO_URL: mongodb://audit-mongo:27017/auditdb
     depends_on:
       - audit-mongo
 
-  # ----------------------------
-  # AUDIT DATABASE
-  # ----------------------------
   audit-mongo:
     image: mongo:7
     container_name: audit-mongo
@@ -68,8 +50,18 @@ services:
       - audit-mongo-data:/data/db
 
   # ----------------------------
-  # COMPETITION POSTGRES (NOVO)
+  # COMPETITION SERVICE
   # ----------------------------
+  competition-service:
+    build: ./competition-service
+    container_name: competition-service
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./competition-service/.env.docker
+    depends_on:
+      - competition-postgres
+
   competition-postgres:
     image: postgres:15
     container_name: competition-postgres
@@ -79,13 +71,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: competitiondb
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - competition-postgres-data:/var/lib/postgresql/data
 
-# -------------------------------
-# VOLUMES
-# -------------------------------
 volumes:
   auth-mongo-data:
   audit-mongo-data:
