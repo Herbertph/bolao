@@ -52,4 +52,27 @@ export class MatchesService {
       where: { id },
     });
   }
+
+  async finishMatch(matchId: string, homeScore: number, awayScore: number) {
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+    });
+  
+    if (!match) {
+      throw new Error("MATCH_NOT_FOUND");
+    }
+  
+    if (match.status === "FINISHED") {
+      throw new Error("MATCH_ALREADY_FINISHED");
+    }
+  
+    return prisma.match.update({
+      where: { id: matchId },
+      data: {
+        homeScore,
+        awayScore,
+        status: "FINISHED",
+      },
+    });
+  }
 }
