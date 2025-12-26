@@ -1,4 +1,4 @@
-// src/modules/matches/matches.controller.ts
+
 import type { Request, Response } from "express";
 import { MatchesService } from "./matches.service.js";
 import { Phase } from "@prisma/client";
@@ -18,6 +18,7 @@ export class MatchesController {
         roundId,
       } = req.body;
 
+      // 1️⃣ Campos obrigatórios
       if (
         !competitionId ||
         !phase ||
@@ -31,10 +32,17 @@ export class MatchesController {
         });
       }
 
-      // Validação básica de phase
+      // 2️⃣ Validação do enum Phase
       if (!Object.values(Phase).includes(phase)) {
         return res.status(400).json({
           message: "Invalid phase value",
+        });
+      }
+
+      // 3️⃣ Regra de negócio: GROUP exige groupId
+      if (phase === Phase.GROUP && !groupId) {
+        return res.status(400).json({
+          message: "groupId is required for GROUP phase",
         });
       }
 
@@ -60,32 +68,32 @@ export class MatchesController {
   async list(req: Request, res: Response) {
     try {
       const { competitionId, groupId, roundId } = req.query;
-  
-      // Nenhum filtro → erro explícito
+
       if (!competitionId && !groupId && !roundId) {
         return res.status(400).json({
-          message: "At least one filter is required: competitionId, groupId or roundId",
+          message:
+            "At least one filter is required: competitionId, groupId or roundId",
         });
       }
-  
+
       const filters: {
         competitionId?: string;
         groupId?: string;
         roundId?: string;
       } = {};
-  
+
       if (typeof competitionId === "string") {
         filters.competitionId = competitionId;
       }
-  
+
       if (typeof groupId === "string") {
         filters.groupId = groupId;
       }
-  
+
       if (typeof roundId === "string") {
         filters.roundId = roundId;
       }
-  
+
       const matches = await service.list(filters);
       return res.json(matches);
     } catch (error) {

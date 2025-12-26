@@ -27,7 +27,9 @@ export class AdminMatchesController {
 
     // 🔒 Idempotência
     if (match.status === MatchStatus.FINISHED) {
-      return res.status(204).send();
+      return res.status(409).json({
+        message: "Match already finished",
+      });
     }
 
     const updated = await prisma.match.update({

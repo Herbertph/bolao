@@ -7,6 +7,7 @@ import adminMatchesRoutes from "./modules/matches/admin.matches.routes.js"
 import roundsRoutes from "./modules/rounds/rounds.routes.js"
 import predictionsRoutes from "./modules/predictions/predictions.routes.js"
 import scoringRoutes from "./modules/scoring/scoring.routes.js"
+import rankingRoutes from "./modules/ranking/ranking.routes.js";
 
 export const app = express();
 
@@ -20,7 +21,8 @@ app.use("/admin/matches", adminMatchesRoutes);
 app.use("/rounds", roundsRoutes);
 app.use("/predictions", predictionsRoutes);
 app.use("/admin/score", scoringRoutes);
-console.log("ADMIN MATCHES ROUTES LOADED");
+app.use("/ranking", rankingRoutes);
+
 
 
 
