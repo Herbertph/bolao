@@ -1,6 +1,9 @@
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { app } from "../../app.js";
 import { Phase } from "@prisma/client";
+
+const JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
 describe("Prediction endpoints", () => {
   let competitionId: string;
@@ -8,7 +11,13 @@ describe("Prediction endpoints", () => {
   let homeTeamId: string;
   let awayTeamId: string;
   let matchId: string;
+
   const userId = "user-test-123";
+
+  const token = jwt.sign(
+    { sub: userId, role: "USER" },
+    JWT_SECRET
+  );
 
   beforeAll(async () => {
     // Competition
@@ -70,8 +79,8 @@ describe("Prediction endpoints", () => {
   it("should create a prediction", async () => {
     const res = await request(app)
       .post("/predictions")
+      .set("Authorization", `Bearer ${token}`)
       .send({
-        userId,
         matchId,
         predictedHomeScore: 2,
         predictedAwayScore: 1,
@@ -86,13 +95,13 @@ describe("Prediction endpoints", () => {
   it("should update prediction for same user and match", async () => {
     const res = await request(app)
       .post("/predictions")
+      .set("Authorization", `Bearer ${token}`)
       .send({
-        userId,
         matchId,
         predictedHomeScore: 3,
         predictedAwayScore: 2,
       });
-  
+
     expect(res.status).toBe(201);
     expect(res.body.predictedHomeScore).toBe(3);
     expect(res.body.predictedAwayScore).toBe(2);
@@ -101,9 +110,8 @@ describe("Prediction endpoints", () => {
   it("should fail without required fields", async () => {
     const res = await request(app)
       .post("/predictions")
-      .send({
-        userId,
-      });
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
 
     expect(res.status).toBe(400);
     expect(res.body.message).toContain("required");
@@ -119,10 +127,10 @@ describe("Prediction endpoints", () => {
     expect(res.body.length).toBeGreaterThan(0);
   });
 
-  it("should list predictions by userId", async () => {
-    const res = await request(app).get(
-      `/predictions?userId=${userId}`
-    );
+  it("should list predictions for logged user", async () => {
+    const res = await request(app)
+      .get("/predictions/me")
+      .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);

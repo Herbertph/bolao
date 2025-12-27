@@ -4,8 +4,9 @@ module.exports = {
   testMatch: ["**/*.spec.ts"],
   clearMocks: true,
 
-  // Jest + ESM + TS
   extensionsToTreatAsEsm: [".ts"],
+
+  setupFiles: ["<rootDir>/src/utils/setup.ts"],
 
   globals: {
     "ts-jest": {
@@ -14,7 +15,6 @@ module.exports = {
     },
   },
 
-  // Permite imports com .js (padrão ESM) resolverem para .ts nos testes
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },

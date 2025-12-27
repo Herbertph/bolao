@@ -1,13 +1,14 @@
 import type { Request, Response } from "express";
 import { PredictionsService } from "./predictions.service.js";
+import { AuthRequest } from "../../middleware/auth.middleware.js";
 
 const service = new PredictionsService();
 
 export class PredictionsController {
-  async create(req: Request, res: Response) {
+  async create(req: AuthRequest, res: Response) {
     try {
+      const userId = req.user?.id; 
       const {
-        userId,
         matchId,
         predictedHomeScore,
         predictedAwayScore,
@@ -21,7 +22,7 @@ export class PredictionsController {
       ) {
         return res.status(400).json({
           message:
-            "userId, matchId, predictedHomeScore and predictedAwayScore are required",
+            "matchId, predictedHomeScore and predictedAwayScore are required",
         });
       }
 
@@ -47,13 +48,11 @@ export class PredictionsController {
     }
   }
 
-  async listByUser(req: Request, res: Response) {
-    const { userId } = req.query;
+  async listMe(req: AuthRequest, res: Response) {
+    const userId = req.user?.id;
 
-    if (!userId || typeof userId !== "string") {
-      return res.status(400).json({
-        message: "userId is required",
-      });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     const predictions = await service.listByUser(userId);
@@ -61,40 +60,15 @@ export class PredictionsController {
   }
 
   async listByMatch(req: Request, res: Response) {
-    try {
-      const { matchId } = req.query;
-  
-      if (!matchId || typeof matchId !== "string") {
-        return res.status(400).json({
-          message: "matchId is required",
-        });
-      }
-  
-      const predictions = await service.listByMatch(matchId);
-  
-      return res.json(predictions);
-    } catch (error) {
-      console.error("PredictionsController.listByMatch error:", error);
-      return res.status(500).json({
-        message: "Internal server error",
-      });
-    }
-  }
-  
+    const { matchId } = req.query;
 
-  async lock(req: Request, res: Response) {
-    const { matchId } = req.params;
-
-    if (!matchId) {
+    if (!matchId || typeof matchId !== "string") {
       return res.status(400).json({
         message: "matchId is required",
       });
     }
 
-    await service.lockPredictions(matchId);
-
-    return res.json({
-      message: "Predictions locked",
-    });
+    const predictions = await service.listByMatch(matchId);
+    return res.json(predictions);
   }
 }

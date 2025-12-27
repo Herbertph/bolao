@@ -1,26 +1,28 @@
 import { Router } from "express";
 import { PredictionsController } from "./predictions.controller.js";
+import { authenticate } from "../../middleware/auth.middleware.js";
 
 const router = Router();
 const controller = new PredictionsController();
 
-router.post("/", (req, res) => controller.create(req, res));
-router.get("/", (req, res) => {
-  if (req.query.matchId) {
-    return controller.listByMatch(req, res);
-  }
+// criar / atualizar prediction
+router.post(
+  "/",
+  authenticate,
+  (req, res) => controller.create(req, res)
+);
 
-  if (req.query.userId) {
-    return controller.listByUser(req, res);
-  }
+// listar minhas predictions
+router.get(
+  "/me",
+  authenticate,
+  (req, res) => controller.listMe(req, res)
+);
 
-  return res.status(400).json({
-    message: "userId or matchId is required",
-  });
-});
-
-router.post("/lock/:matchId", (req, res) =>
-  controller.lock(req, res)
+// público — por match
+router.get(
+  "/",
+  (req, res) => controller.listByMatch(req, res)
 );
 
 export default router;

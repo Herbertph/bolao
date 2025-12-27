@@ -1,10 +1,11 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import { AuthRequest } from "../../middleware/auth.middleware.js";
 import { ScoringService } from "./scoring.service.js";
 
 const service = new ScoringService();
 
 export class ScoringController {
-  async scoreMatch(req: Request, res: Response) {
+  async scoreMatch(req: AuthRequest, res: Response) {
     try {
       const { matchId } = req.params;
 
@@ -24,6 +25,12 @@ export class ScoringController {
       if (error.message === "MATCH_NOT_FINISHED") {
         return res.status(409).json({
           message: "Match is not finished yet",
+        });
+      }
+
+      if (error.message === "MATCH_NOT_FOUND") {
+        return res.status(404).json({
+          message: "Match not found",
         });
       }
 
